@@ -1,4 +1,6 @@
 rlogix
 ======
 
-Rlogix - Transports your local syslog to Graylog2 via AMQP -> Fork of logix
+Rlogix
+
+Recives pipe data and post it to a AMPQ Server and local Syslog.
