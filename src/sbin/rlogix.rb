@@ -1,18 +1,11 @@
 #!/usr/bin/ruby
 
-require "rubygems"
-require "amqp"
-require "fileutils"
 require "yaml"
-require "socket"
+require "syslog"
+require "bunny"
 
 $config_file = "/etc/rlogix/rlogix.conf"
-$hostname = Socket.gethostname
-$severity = ['emerg', 'alert', 'crit', 'err', 'warn', 'notice', 'info', 'debug']
-$facility = ['kern', 'user', 'mail', 'daemon', 'auth', 'syslog', 'lpr',
-            'news', 'uucp', 'cron', 'authpriv', 'ftp', 'ntp', 'audit',
-            'alert', 'at', 'local0', 'local1', 'local2', 'local3',
-            'local4', 'local5', 'local6', 'local7']
+$MSG = ARGF.read
 
 def load_config()
 	
@@ -26,43 +19,26 @@ def load_config()
 	
 	globalConf = loadedConf.fetch('global')
 	$server = globalConf['server']
+	$queue = globalConf['queue']
 	$debug = globalConf['debug']
-	$q = globalConf['queue']
-
-
+	$port = globalConf['port']
+	$user = globalConf['user']
+	$pass = globalConf['pass']
+	$vhost = globalConf['vhost']
 end 
 
 def write_amqp()
 
-	EventMachine.run do
-  		connection = AMQP.connect(:host => $server)
-  		puts "Connected to AMQP broker. Running #{AMQP::VERSION} version of the gem..."
+	Syslog.open("Rlogix", Syslog::LOG_PID, Syslog::LOG_DAEMON | Syslog::LOG_LOCAL3)
+	
+	conn = Bunny.new(:user => $user, :pass => $pass, :host => $server)
+	conn.start
+	q = conn.queue($queue)
+	q.publish($MSG)
+	conn.stop
 
-  		channel  = AMQP::Channel.new(connection)
-  		queue    = channel.queue($q, :auto_delete => false)
-  		exchange = channel.direct("")
-
-  	queue.subscribe do |payload|
-    	puts "Received a message: #{payload}. Disconnecting..."
-    connection.close { EventMachine.stop }
-  	end
-
-  	exchange.publish "Hello, world!", :routing_key => queue.name
-end
-
+	Syslog.close()
 end
 
 load_config()
 write_amqp()
-
-	#puts $server
-	#puts $debug
-	#puts $hostname
-	#puts $severity
-	#puts $facility
-	#puts $q
-
-#def main()
-	
-#end
-
