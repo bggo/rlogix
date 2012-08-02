@@ -4,17 +4,11 @@ require "yaml"
 require "syslog"
 require "bunny"
 require "socket"
+require "json"
 
 $config_file = "/etc/rlogix/rlogix.conf"
-$MSG = ARGF.read
 $HOST = Socket.gethostname 
-
-gelf_log_msg = {	
-	"host" => $HOST,
-	"short_message" => $MSG,
-	"version" => "1.0",
-	"timestamp" => Time.now.to_i
-}.to_json
+BUFFER = Array.new
 
 def load_config()
 	
@@ -40,16 +34,37 @@ def write_amqp()
 
 	Syslog.open("Rlogix", Syslog::LOG_PID, Syslog::LOG_DAEMON | Syslog::LOG_LOCAL3)
 	
-	conn = Bunny.new(:user => $user, :pass => $pass, :host => $server)
-	conn.start
-	q = conn.queue($queue)
-	q.publish(msg_gelf)
-	conn.stop
+	ARGF.each do |line|
+		
+		BUFFER << line
+
+		if BUFFER.length >= 10 
+
+			conn = Bunny.new(:user => $user, :pass => $pass, :host => $server, :logging => true, :logfile => "/tmp/bunny.log")
+			conn.start
+			q = conn.queue($queue)
+			
+			BUFFER.each do |msg|
+				q.publish(msg, :persistent => false)
+			end
+			conn.stop
+
+			BUFFER.clear
+		else
+			puts "PUTS TIME ################################"
+		end
+
+		BUFFER.each do |pos|
+			puts pos
+		end
+		
+		w = BUFFER.length
+		puts w
+
+	end
 
 	Syslog.close()
 end
-
-
 
 load_config()
 write_amqp()
