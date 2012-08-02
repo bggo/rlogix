@@ -28,6 +28,8 @@ def load_config()
 	$user = globalConf['user']
 	$pass = globalConf['pass']
 	$vhost = globalConf['vhost']
+	$max_buffer = globalConf['max_buffer'].to_i
+	puts $max_buffer
 end 
 
 def write_amqp()
@@ -38,14 +40,16 @@ def write_amqp()
 		
 		BUFFER << line
 
-		if BUFFER.length >= 10 
+		if BUFFER.length >= $max_buffer
 
-			conn = Bunny.new(:user => $user, :pass => $pass, :host => $server, :logging => true, :logfile => "/tmp/bunny.log")
+			conn = Bunny.new(:user => $user, :pass => $pass, :host => $server, :logging => true)
+			#, :logfile => "/tmp/bunny.log")
 			conn.start
 			q = conn.queue($queue)
 			
 			BUFFER.each do |msg|
 				q.publish(msg, :persistent => false)
+				puts "##################################################"
 			end
 			conn.stop
 
