@@ -3,9 +3,11 @@
 require "yaml"
 require "syslog"
 require "bunny"
+require "socket"
 
 $config_file = "/etc/rlogix/rlogix.conf"
 $MSG = ARGF.read
+$HOST = Socket.gethostname 
 
 def load_config()
 	
@@ -34,10 +36,17 @@ def write_amqp()
 	conn = Bunny.new(:user => $user, :pass => $pass, :host => $server)
 	conn.start
 	q = conn.queue($queue)
-	q.publish($MSG)
+	q.publish(msg_gelf)
 	conn.stop
 
 	Syslog.close()
+end
+
+def msg_gelf()
+	"host" => ,
+	"short_message" => $MSG,
+	"version" => "1.0",
+	"timestamp" => Time.now.to_i
 end
 
 load_config()
