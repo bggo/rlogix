@@ -9,6 +9,13 @@ $config_file = "/etc/rlogix/rlogix.conf"
 $MSG = ARGF.read
 $HOST = Socket.gethostname 
 
+gelf_log_msg = {	
+	"host" => $HOST,
+	"short_message" => $MSG,
+	"version" => "1.0",
+	"timestamp" => Time.now.to_i
+}.to_json
+
 def load_config()
 	
 	if File.exists?($config_file)
@@ -42,12 +49,7 @@ def write_amqp()
 	Syslog.close()
 end
 
-def msg_gelf()
-	"host" => ,
-	"short_message" => $MSG,
-	"version" => "1.0",
-	"timestamp" => Time.now.to_i
-end
+
 
 load_config()
 write_amqp()
